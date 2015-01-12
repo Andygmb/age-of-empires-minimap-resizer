@@ -15,43 +15,30 @@ from ctypes import windll
 
 
 class MaxiMap:
-	def __init__(self, pygame):
-		self.pygame = pygame
+	def __init__(self):
 		self.border_width = win32api.GetSystemMetrics(32)
 		self.screen = None
 		self.aoe_hwnd = None
 		self.aoe2window = None
 		self.map_w, self.map_h = 350, 175
-		self.window_size = 700, 350
+		self.window_size = self.map_w * 2, self.map_h * 2
 		self.q = Queue.Queue()
 
-	def pygame_setup(self):
-		# Init pygame, create clock, set up display to be resizeable and use hardware acc
-		# set up caption/icon
-		self.pygame.init()
-		self.clock = self.pygame.time.Clock()
-		self.set_screen(self.window_size)
-		self.pygame.display.set_icon(pygame.image.load("icon.bmp"))
-		self.pygame.display.set_caption("Age of empires Minimap resizer")
-
-	def get_hwnd(self):
+	def get_hwnd(self, hwnd_string):
 		# FindWindowEx returns 0 if it cannot find the string arg
-		self.aoe_hwnd = win32gui.FindWindowEx(None, 0, None, "Age of Empires II: HD Edition")
+		self.aoe_hwnd = win32gui.FindWindowEx(None, 0, None, hwnd_string)
 		if self.aoe_hwnd:
 			return True
 		else:
 			return False
 
-	def resize_window(self, event):
+	def resize_window(self, event, screen):
 		self.window_size = event.dict['size']
-		self.set_screen(self.window_size)
+		set_screen(self.window_size)
 		if self.aoe_hwnd:
-			self.screen.blit(self.pygame.image.load(self.screengrab()),(0,0))
+			screen.blit(pygame.image.load(self.screengrab()),(0,0))
 		else:
-			self.display_text("Could not find Age of Empires II Window")
-
-	def set_screen(self, window_size):
-		self.screen = self.pygame.display.set_mode(window_size,HWSURFACE|DOUBLEBUF|RESIZABLE)
+			self.display_text("Could not find Age of Empires II Window", screen)
 
 	def print_window(self, hwnd, saveDC):
 		result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
@@ -107,11 +94,11 @@ class MaxiMap:
 		# tmp.seek(0)
 		# return tmp
 
-	def display_text(self, text):
+	def display_text(self, text, screen):
 		font = pygame.font.Font(None, 30)
 		text = font.render(text, False, (255,255,255))
-		self.screen.fill((0,0,0))
-		self.screen.blit(text, (10, 10))
+		screen.fill((0,0,0))
+		screen.blit(text, (10, 10))
 
 	def translate_co_ord(self, co_ord, scaled_value, original_value):
   		percentage = 100 * float(co_ord)/float(scaled_value)
@@ -173,36 +160,51 @@ class NewThread(threading.Thread):
 		self.__queue.put((self.saveDC, result),1 )
 
 
+def pygame_setup(window_size):
+	# Init pygame, create clock, set up display to be resizeable and use hardware acc
+	# set up caption/icon
+	pygame.init()
+	clock = pygame.time.Clock()
+	screen = set_screen(window_size)
+	pygame.display.set_icon(pygame.image.load("icon.bmp"))
+	pygame.display.set_caption("Age of empires Minimap resizer")
+	return screen, clock, pygame
+
+def set_screen(window_size):
+	screen = pygame.display.set_mode(window_size,HWSURFACE|DOUBLEBUF|RESIZABLE)
+	return screen
 
 def main():
+	Map = MaxiMap()
 	running = True
-	Map = MaxiMap(pygame)
-	Map.pygame_setup()
+	window_size = Map.map_w * 2, Map.map_h * 2
+	screen, clock, pygame = pygame_setup(window_size)
 	while running:
-		Map.pygame.event.pump()
-		Map.get_hwnd()
-		for event in Map.pygame.event.get():
-			if event.type == Map.pygame.QUIT:
+		pygame.event.pump()
+		Map.get_hwnd("Age of Empires II: HD Edition")
+		for event in pygame.event.get():
+			if event.type == pygame.QUIT:
 				running = False
-				Map.pygame.quit()
+				pygame.quit()
 				sys.exit()
 
 			if event.type == VIDEORESIZE:
-				Map.resize_window(event)
-				Map.pygame.display.flip()
+				Map.resize_window(event, screen)
+				pygame.display.flip()
 
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				Map.mouse_click(event.pos, event.button)
 
  		if Map.aoe_hwnd:
-			Map.screen.blit(Map.pygame.image.load(Map.screengrab()), (0,0))
-			Map.pygame.display.flip()
+			screen.blit(pygame.image.load(Map.screengrab()), (0,0))
+			pygame.display.flip()
 
 		# If no window for age of empires II could be found.
 		else:
-			Map.display_text("Could not find Age of Empires II Window")
-			Map.pygame.display.flip()
-		Map.clock.tick(30)
+			Map.display_text("Could not find Age of Empires II Window", screen)
+			pygame.display.flip()
+
+		clock.tick(30)
 
 
 
