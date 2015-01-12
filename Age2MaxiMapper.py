@@ -1,15 +1,16 @@
 import sys
-import time
 import pygame
 import win32gui
+import win32con
 import win32api
 import win32ui
 import cStringIO
 import threading
+import time
 import Queue
-import random 
-from PIL import Image, ImageGrab
-from pygame.locals import *
+from math import floor
+from PIL import Image
+from pygame.locals import HWSURFACE, DOUBLEBUF, RESIZABLE, VIDEORESIZE
 from ctypes import windll
 
 
@@ -73,9 +74,8 @@ class MaxiMap:
 		saveBitMap.CreateCompatibleBitmap(mfcDC, self.map_w, self.map_h)
 
 		saveDC.SelectObject(saveBitMap)
-		MyThread(self.print_window, hwnd, saveDC, self.q).start()
-		saveDC = self.q.get()
-		result = 1
+		NewThread(self.print_window, hwnd, saveDC, self.q).start()
+		saveDC, result = self.q.get()
 		# Change the line below depending on whether you want the whole window
 		# or just the client area. 
 		#result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
@@ -112,19 +112,58 @@ class MaxiMap:
 		self.screen.fill((0,0,0))
 		self.screen.blit(text, (10, 10))
 
+	def translate_co_ord(self, co_ord, scaled_value, original_value):
+  		percentage = 100 * float(co_ord)/float(scaled_value)
+  		return int(floor((percentage * original_value) / 100.0))
 
-class MyThread(threading.Thread):
+	def mouse_click(self, event):
+
+		if self.aoe_hwnd:
+			left, top, right, bot = win32gui.GetClientRect(self.aoe_hwnd)
+			x, y = event.pos
+			x = (right - self.map_w) + (self.translate_co_ord(x, self.window_size[0], self.map_w))
+			y = (bot - self.map_h) + (self.translate_co_ord(y, self.window_size[1], self.map_h))
+			aoe2window = make_pycwnd(self.aoe_hwnd)
+			pygamewindow = make_pycwnd(win32gui.FindWindowEx(None, 0, None, "Age of empires Minimap resizer"))
+			#x = (x/self.map_w) * self.window_size[0]
+			#y = (y/self.map_h) * self.window_size[1]
+			print x, y
+			lParam = y << 16 | x
+			print lParam & 0xF777, lParam >> 16
+			print win32gui.GetActiveWindow()
+			aoe2window.SetFocus()
+			aoe2window.SetForegroundWindow()
+			aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+			aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
+			aoe2window.UpdateWindow()
+			pygamewindow.SetForegroundWindow()
+			pygamewindow.UpdateWindow()
+			aoe2window.SetForegroundWindow()
+			print win32gui.GetActiveWindow()
+
+def make_pycwnd(hwnd):
+    PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
+    return PyCWnd
+# HWND h = (hwnd of window)
+
+# WORD mouseX = 10;// x coord of mouse
+
+# WORD mouseY = 10;// y coord of mouse
+
+# PostMessage(hWnd,WM_LBUTTONDOWN,0,MAKELPARAM(mouseX,mouseY));
+
+
+class NewThread(threading.Thread):
 	def __init__(self, print_window, hwnd, saveDC, queue):
 		threading.Thread.__init__(self)
 		self.__queue = queue 
 		self.hwnd = hwnd
 		self.saveDC = saveDC
-		self.cb = print_window
+		self.function = print_window
 
 	def run(self):
-		result = self.cb(self.hwnd,self.saveDC)
-		print self.saveDC
-		self.__queue.put(self.saveDC,random.randint(0, 1000) )
+		result = self.function(self.hwnd,self.saveDC)
+		self.__queue.put((self.saveDC, result),1 )
 
 
 def main():
@@ -133,7 +172,6 @@ def main():
 	Map.pygame_setup()
 
 	while running:
-		print threading.active_count()
 		Map.pygame.event.pump()
 		Map.get_hwnd()
 		for event in Map.pygame.event.get():
@@ -146,6 +184,8 @@ def main():
 				Map.resize_window(event)
 				Map.pygame.display.flip()
 
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				Map.mouse_click(event)
 
  		if Map.aoe_hwnd:
 			Map.screen.blit(Map.pygame.image.load(Map.screengrab()), (0,0))
