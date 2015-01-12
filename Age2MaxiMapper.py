@@ -20,6 +20,7 @@ class MaxiMap:
 		self.border_width = win32api.GetSystemMetrics(32)
 		self.screen = None
 		self.aoe_hwnd = None
+		self.aoe2window = None
 		self.map_w, self.map_h = 350, 175
 		self.window_size = 700, 350
 		self.q = Queue.Queue()
@@ -116,34 +117,40 @@ class MaxiMap:
   		percentage = 100 * float(co_ord)/float(scaled_value)
   		return int(floor((percentage * original_value) / 100.0))
 
-	def mouse_click(self, event):
-
+	def mouse_click(self, (x, y), button):
 		if self.aoe_hwnd:
 			left, top, right, bot = win32gui.GetClientRect(self.aoe_hwnd)
-			x, y = event.pos
 			x = (right - self.map_w) + (self.translate_co_ord(x, self.window_size[0], self.map_w))
 			y = (bot - self.map_h) + (self.translate_co_ord(y, self.window_size[1], self.map_h))
-			aoe2window = make_pycwnd(self.aoe_hwnd)
-			pygamewindow = make_pycwnd(win32gui.FindWindowEx(None, 0, None, "Age of empires Minimap resizer"))
-			#x = (x/self.map_w) * self.window_size[0]
-			#y = (y/self.map_h) * self.window_size[1]
-			print x, y
+			aoe2window = self.make_pycwnd(self.aoe_hwnd)
+			pygamewindow = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, "Age of empires Minimap resizer"))
 			lParam = y << 16 | x
-			print lParam & 0xF777, lParam >> 16
-			print win32gui.GetActiveWindow()
-			aoe2window.SetFocus()
-			aoe2window.SetForegroundWindow()
-			aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-			aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
+			#print lParam & 0xF777, lParam >> 16
+			#self.aoe2window.SetCapture()
+			try:
+				aoe2window.SetForegroundWindow()
+			except win32ui.error as e:
+				print e
+				self.aoe_hwnd = None
+			if button == 1:
+				aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+				aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
+			elif button == 3:
+				aoe2window.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
+				aoe2window.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
 			aoe2window.UpdateWindow()
-			pygamewindow.SetForegroundWindow()
+			#self.aoe2window.ReleaseCapture()
+			try:
+				pygamewindow.SetForegroundWindow()
+			except win32ui.error as e:
+				print e
+				self.aoe_hwnd = None
 			pygamewindow.UpdateWindow()
-			aoe2window.SetForegroundWindow()
-			print win32gui.GetActiveWindow()
 
-def make_pycwnd(hwnd):
-    PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
-    return PyCWnd
+	def make_pycwnd(self,hwnd):
+		PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
+		return PyCWnd
+
 # HWND h = (hwnd of window)
 
 # WORD mouseX = 10;// x coord of mouse
@@ -166,11 +173,11 @@ class NewThread(threading.Thread):
 		self.__queue.put((self.saveDC, result),1 )
 
 
+
 def main():
 	running = True
 	Map = MaxiMap(pygame)
 	Map.pygame_setup()
-
 	while running:
 		Map.pygame.event.pump()
 		Map.get_hwnd()
@@ -185,7 +192,7 @@ def main():
 				Map.pygame.display.flip()
 
 			if event.type == pygame.MOUSEBUTTONDOWN:
-				Map.mouse_click(event)
+				Map.mouse_click(event.pos, event.button)
 
  		if Map.aoe_hwnd:
 			Map.screen.blit(Map.pygame.image.load(Map.screengrab()), (0,0))
