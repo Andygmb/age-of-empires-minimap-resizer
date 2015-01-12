@@ -16,7 +16,6 @@ from ctypes import windll
 
 class MaxiMap:
 	def __init__(self):
-		self.border_width = win32api.GetSystemMetrics(32)
 		self.screen = None
 		self.aoe_hwnd = None
 		self.aoe2window = None
@@ -36,7 +35,7 @@ class MaxiMap:
 		self.window_size = event.dict['size']
 		set_screen(self.window_size)
 		if self.aoe_hwnd:
-			screen.blit(pygame.image.load(self.screengrab()),(0,0))
+			self.screengrab(screen)
 		else:
 			self.display_text("Could not find Age of Empires II Window", screen)
 
@@ -44,36 +43,37 @@ class MaxiMap:
 		result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
 		return result
 
-	def screengrab(self):
+	def screengrab(self, screen):
 		hwnd = self.aoe_hwnd
 		left, top, right, bot = win32gui.GetClientRect(hwnd)
 		w = right - left
 		h = bot - top
-		#returns the device context (DC) for the entire window, including title bar, menus, and scroll bars.
+		# Returns the device context (DC) for the entire window, including title bar, menus, and scroll bars.
 		hwndDC = win32gui.GetWindowDC(hwnd)
-		#Creates a DC object from an integer handle.
+		# Creates a DC object from an integer handle.
 		mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
-		#Creates a memory device context (DC) compatible with the specified device.
+		# Creates a memory device context (DC) compatible with the specified device.
 		saveDC = mfcDC.CreateCompatibleDC()
+		# Setting window origin to the top left hand corner of the minimap
 		saveDC.SetWindowOrg((w - self.map_w,h - self.map_h))
 		#Creates bitmap Object
 		saveBitMap = win32ui.CreateBitmap()
 		#Creates a bitmap object from a HBITMAP.
 		saveBitMap.CreateCompatibleBitmap(mfcDC, self.map_w, self.map_h)
-
 		saveDC.SelectObject(saveBitMap)
+		# Spawn a new thread seperate to main thread for the PrintWindow function 
+		# because PrintWindow is a synchronous blocking function that can cause hanging if
+		# ran in the same thread as the display code
 		NewThread(self.print_window, hwnd, saveDC, self.q).start()
+		# Get the DC from the queue along with the bool result.
 		saveDC, result = self.q.get()
-		# Change the line below depending on whether you want the whole window
-		# or just the client area. 
-		#result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
+
 		bmpinfo = saveBitMap.GetInfo()
 		bmpstr = saveBitMap.GetBitmapBits(True)
 		im = Image.frombuffer(
 			'RGB',
 			(bmpinfo['bmWidth'], bmpinfo['bmHeight']),
 			bmpstr, 'raw', 'BGRX', 0, 1)
-
 		win32gui.DeleteObject(saveBitMap.GetHandle())
 		saveDC.DeleteDC()
 		mfcDC.DeleteDC()
@@ -83,16 +83,10 @@ class MaxiMap:
 			im = im.resize(self.window_size)
 			im.save(tmp, "bmp")
 			tmp.seek(0)
-			return tmp
+			screen.blit(pygame.image.load(tmp),(0,0))
+		else:
+			self.display_text("Could not grab game window to display", screen)
 
-		# # Create cStringIO file object
-		# tmp = cStringIO.StringIO()
-		# # Grab image, save to temp file object
-		# screengrab = ImageGrab.grab(bbox=self.map_bbox).resize(self.window_size)
-		# screengrab.save(tmp, "bmp")
-		# # Seeking tells the file object to start at byte 0
-		# tmp.seek(0)
-		# return tmp
 
 	def display_text(self, text, screen):
 		font = pygame.font.Font(None, 30)
@@ -113,7 +107,6 @@ class MaxiMap:
 			pygamewindow = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, "Age of empires Minimap resizer"))
 			lParam = y << 16 | x
 			#print lParam & 0xF777, lParam >> 16
-			#self.aoe2window.SetCapture()
 			try:
 				aoe2window.SetForegroundWindow()
 			except win32ui.error as e:
@@ -126,7 +119,6 @@ class MaxiMap:
 				aoe2window.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
 				aoe2window.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
 			aoe2window.UpdateWindow()
-			#self.aoe2window.ReleaseCapture()
 			try:
 				pygamewindow.SetForegroundWindow()
 			except win32ui.error as e:
@@ -137,14 +129,6 @@ class MaxiMap:
 	def make_pycwnd(self,hwnd):
 		PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
 		return PyCWnd
-
-# HWND h = (hwnd of window)
-
-# WORD mouseX = 10;// x coord of mouse
-
-# WORD mouseY = 10;// y coord of mouse
-
-# PostMessage(hWnd,WM_LBUTTONDOWN,0,MAKELPARAM(mouseX,mouseY));
 
 
 class NewThread(threading.Thread):
@@ -177,7 +161,7 @@ def set_screen(window_size):
 def main():
 	Map = MaxiMap()
 	running = True
-	window_size = Map.map_w * 2, Map.map_h * 2
+	window_size = Map.window_size
 	screen, clock, pygame = pygame_setup(window_size)
 	while running:
 		pygame.event.pump()
@@ -196,7 +180,7 @@ def main():
 				Map.mouse_click(event.pos, event.button)
 
  		if Map.aoe_hwnd:
-			screen.blit(pygame.image.load(Map.screengrab()), (0,0))
+ 			Map.screengrab(screen)
 			pygame.display.flip()
 
 		# If no window for age of empires II could be found.
