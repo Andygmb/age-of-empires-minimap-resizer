@@ -19,3 +19,9 @@
     python Age2MaxiMapper.py 
 
 It will autodetect if the AoE2 window is available, and display it. You can click on the enlarged minimap to send clicks to the actual game, but due to how age of empires doesn't run when it's not in focus/is the foreground window, the minimap will only update when you click back into the game. 
+
+##Dependencies
+
+* [PyWin32](http://sourceforge.net/projects/pywin32/)
+* [Pygame](http://pygame.org/)
+* [PIL](http://www.pythonware.com/products/pil/)
