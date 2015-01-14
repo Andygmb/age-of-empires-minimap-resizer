@@ -113,19 +113,13 @@ class MaxiMap:
 				if button == 1:
 					aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
 					aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
-
 				elif button == 3:
 					aoe2window.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
 					aoe2window.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
-				#aoe2window.ReleaseCapture()
-				aoe2window.SendMessage(win32con.WM_CAPTURECHANGED, 0, 0)
 				aoe2window.UpdateWindow()
 			except win32ui.error as e:
 				self.aoe_hwnd = None
-
 			try:
-				aoe2window.SetCapture()
-				aoe2window.SetFocus()
 				pygamewindow.SetForegroundWindow()
 				pygamewindow.UpdateWindow()
 			except win32ui.error as e:
@@ -156,7 +150,7 @@ def pygame_setup(window_size):
 	pygame.init()
 	clock = pygame.time.Clock()
 	screen = set_screen(window_size)
-	pygame.display.set_icon(pygame.image.load("icon2.bmp"))
+	pygame.display.set_icon(pygame.image.load("icon.bmp"))
 	pygame.display.set_caption("Age of empires Minimap resizer")
 	return screen, clock, pygame
 
@@ -173,8 +167,6 @@ def main():
 	while running:
 		pygame.event.pump()
 		Map.get_hwnd("Age of Empires II: HD Edition")
-		aoe2window = Map.make_pycwnd(Map.aoe_hwnd)
-		aoe2window.UpdateWindow()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				running = False
