@@ -115,13 +115,12 @@ class MaxiMap:
 				aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
 			aoe2_pycwnd.UpdateWindow()
 		except win32ui.error as e:
-			self.aoe_hwnd = None
+			pass
 		try:
 			pygame_pycwnd.SetForegroundWindow()
 			pygame_pycwnd.UpdateWindow()
 		except win32ui.error as e:
-			print e
-			self.aoe_hwnd = None
+			pass
 
 	def make_pycwnd(self,hwnd):
 		PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
@@ -161,8 +160,16 @@ def main():
 	running = True
 	window_size = Map.window_size
 	screen, clock, pygame = pygame_setup(window_size)
-
+	mouse_states = {
+	1:False,
+	2:False,
+	3:False
+	}
 	while running:
+		#for button, value in mouse_states.iteritems():
+			#if value and Map.aoe_hwnd:
+				#Map.mouse_click(pygame.mouse.get_pos(), value)
+
 		pygame.event.pump()
 		Map.get_hwnd("Age of Empires II: HD Edition")
 		for event in pygame.event.get():
@@ -177,17 +184,21 @@ def main():
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				if Map.aoe_hwnd:
 					Map.mouse_click(event.pos, event.button)
+				mouse_states[event.button] = True
 
- 		if Map.aoe_hwnd:
- 			Map.screengrab(screen)
-			pygame.display.flip()
+			if event.type == pygame.MOUSEBUTTONUP:
+				mouse_states[event.button] = False
+
+
+		if Map.aoe_hwnd:
+			Map.screengrab(screen)
 
 		# If no window for age of empires II could be found.
 		else:
 			Map.display_text("Could not find Age of Empires II Window", screen)
-			pygame.display.flip()
-
-		clock.tick(30)
+		
+		pygame.display.flip()
+		clock.tick()
 
 
 
