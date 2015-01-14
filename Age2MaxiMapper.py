@@ -12,8 +12,6 @@ import pygame
 from PIL import Image
 from pygame.locals import HWSURFACE, DOUBLEBUF, RESIZABLE, VIDEORESIZE
 
-
-
 class MaxiMap:
 	def __init__(self):
 		self.screen = None
@@ -107,7 +105,6 @@ class MaxiMap:
 		pygame_pycwnd = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, PYGAME_WINDOW_NAME))
 		lParam = y << 16 | x
 		#print lParam & 0xF777, lParam >> 16
-
 		try:
 			aoe2_pycwnd.SetForegroundWindow()
 		except:
@@ -120,7 +117,6 @@ class MaxiMap:
 			aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
 			aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
 		aoe2_pycwnd.UpdateWindow()
-
 
 		try:
 			pygame_pycwnd.SetForegroundWindow()
@@ -151,7 +147,8 @@ def pygame_setup(window_size):
 	pygame.init()
 	clock = pygame.time.Clock()
 	screen = set_screen(window_size)
-	pygame.display.set_icon(pygame.image.load("icon.bmp"))
+	icon = pygame.image.load("icon.png")
+	pygame.display.set_icon(icon)
 	pygame.display.set_caption(PYGAME_WINDOW_NAME)
 	return screen, clock, pygame
 
@@ -173,12 +170,11 @@ def main():
 	3:False
 	}
 	while running:
+		pygame.event.pump()
+		Map.get_hwnd("Age of Empires II: HD Edition")
 		for button, value in mouse_states.iteritems():
 			if value and Map.aoe_hwnd:
 				Map.mouse_click(pygame.mouse.get_pos(), value)
-
-		pygame.event.pump()
-		Map.get_hwnd("Age of Empires II: HD Edition")
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				running = False
