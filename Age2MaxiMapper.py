@@ -107,24 +107,30 @@ class MaxiMap:
 			pygamewindow = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, "Age of empires Minimap resizer"))
 			lParam = y << 16 | x
 			#print lParam & 0xF777, lParam >> 16
+
 			try:
 				aoe2window.SetForegroundWindow()
+				if button == 1:
+					aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+					aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
+
+				elif button == 3:
+					aoe2window.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
+					aoe2window.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
+				#aoe2window.ReleaseCapture()
+				aoe2window.SendMessage(win32con.WM_CAPTURECHANGED, 0, 0)
+				aoe2window.UpdateWindow()
 			except win32ui.error as e:
-				print e
 				self.aoe_hwnd = None
-			if button == 1:
-				aoe2window.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-				aoe2window.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
-			elif button == 3:
-				aoe2window.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
-				aoe2window.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
-			aoe2window.UpdateWindow()
+
 			try:
+				aoe2window.SetCapture()
+				aoe2window.SetFocus()
 				pygamewindow.SetForegroundWindow()
+				pygamewindow.UpdateWindow()
 			except win32ui.error as e:
 				print e
 				self.aoe_hwnd = None
-			pygamewindow.UpdateWindow()
 
 	def make_pycwnd(self,hwnd):
 		PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
@@ -150,7 +156,7 @@ def pygame_setup(window_size):
 	pygame.init()
 	clock = pygame.time.Clock()
 	screen = set_screen(window_size)
-	pygame.display.set_icon(pygame.image.load("icon.bmp"))
+	pygame.display.set_icon(pygame.image.load("icon2.bmp"))
 	pygame.display.set_caption("Age of empires Minimap resizer")
 	return screen, clock, pygame
 
@@ -163,9 +169,12 @@ def main():
 	running = True
 	window_size = Map.window_size
 	screen, clock, pygame = pygame_setup(window_size)
+
 	while running:
 		pygame.event.pump()
 		Map.get_hwnd("Age of Empires II: HD Edition")
+		aoe2window = Map.make_pycwnd(Map.aoe_hwnd)
+		aoe2window.UpdateWindow()
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				running = False
