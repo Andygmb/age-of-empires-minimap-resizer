@@ -1,17 +1,17 @@
 import sys
-import pygame
-import win32gui
-import win32con
-import win32api
-import win32ui
 import cStringIO
 import threading
-import time
 import Queue
 from math import floor
+from ctypes import windll
+
+import win32gui
+import win32con
+import win32ui
+import pygame
 from PIL import Image
 from pygame.locals import HWSURFACE, DOUBLEBUF, RESIZABLE, VIDEORESIZE
-from ctypes import windll
+
 
 
 class MaxiMap:
@@ -34,6 +34,7 @@ class MaxiMap:
 	def resize_window(self, event, screen):
 		self.window_size = event.dict['size']
 		set_screen(self.window_size)
+
 		if self.aoe_hwnd:
 			self.screengrab(screen)
 		else:
@@ -48,7 +49,8 @@ class MaxiMap:
 		left, top, right, bot = win32gui.GetClientRect(hwnd)
 		self.aoe2_window_w = right - left
 		self.aoe2_window_h = bot - top
-		# Returns the device context (DC) for the entire window, including title bar, menus, and scroll bars.
+		# Returns the device context (DC) for the entire window, 
+		# including title bar, menus, and scroll bars.
 		hwndDC = win32gui.GetWindowDC(hwnd)
 		# Creates a DC object from an integer handle.
 		mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
@@ -67,17 +69,18 @@ class MaxiMap:
 		NewThread(self.print_window, hwnd, saveDC, self.q).start()
 		# Get the DC from the queue along with the bool result.
 		saveDC, result = self.q.get()
-
 		bmpinfo = saveBitMap.GetInfo()
 		bmpstr = saveBitMap.GetBitmapBits(True)
 		im = Image.frombuffer(
 			'RGB',
 			(bmpinfo['bmWidth'], bmpinfo['bmHeight']),
 			bmpstr, 'raw', 'BGRX', 0, 1)
+
 		win32gui.DeleteObject(saveBitMap.GetHandle())
 		saveDC.DeleteDC()
 		mfcDC.DeleteDC()
 		win32gui.ReleaseDC(hwnd, hwndDC)
+
 		if result == 1:
 			tmp = cStringIO.StringIO()
 			im = im.resize(self.window_size)
@@ -86,7 +89,6 @@ class MaxiMap:
 			screen.blit(pygame.image.load(tmp),(0,0))
 		else:
 			self.display_text("Could not grab game window to display", screen)
-
 
 	def display_text(self, text, screen):
 		font = pygame.font.Font(None, 30)
@@ -102,25 +104,29 @@ class MaxiMap:
 		x = self.translate_co_ord(x, self.window_size[0], self.map_w, self.aoe2_window_w)
 		y = self.translate_co_ord(y, self.window_size[1], self.map_h, self.aoe2_window_h)
 		aoe2_pycwnd = self.make_pycwnd(self.aoe_hwnd)
-		pygame_pycwnd = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, pygame_window_name))
+		pygame_pycwnd = self.make_pycwnd(win32gui.FindWindowEx(None, 0, None, PYGAME_WINDOW_NAME))
 		lParam = y << 16 | x
 		#print lParam & 0xF777, lParam >> 16
+
 		try:
 			aoe2_pycwnd.SetForegroundWindow()
-			if button == 1:
-				aoe2_pycwnd.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
-				aoe2_pycwnd.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
-			elif button == 3:
-				aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
-				aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
-			aoe2_pycwnd.UpdateWindow()
-		except win32ui.error as e:
+		except:
 			pass
+
+		if button == 1:
+			aoe2_pycwnd.SendMessage(win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, lParam)
+			aoe2_pycwnd.SendMessage(win32con.WM_LBUTTONUP, 0, lParam)
+		elif button == 3:
+			aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONDOWN, win32con.MK_RBUTTON, lParam)
+			aoe2_pycwnd.SendMessage(win32con.WM_RBUTTONUP, 0, lParam)
+		aoe2_pycwnd.UpdateWindow()
+
+
 		try:
 			pygame_pycwnd.SetForegroundWindow()
-			pygame_pycwnd.UpdateWindow()
-		except win32ui.error as e:
+		except:
 			pass
+		pygame_pycwnd.UpdateWindow()
 
 	def make_pycwnd(self,hwnd):
 		PyCWnd = win32ui.CreateWindowFromHandle(hwnd)
@@ -146,29 +152,30 @@ def pygame_setup(window_size):
 	clock = pygame.time.Clock()
 	screen = set_screen(window_size)
 	pygame.display.set_icon(pygame.image.load("icon.bmp"))
-	pygame.display.set_caption(pygame_window_name)
+	pygame.display.set_caption(PYGAME_WINDOW_NAME)
 	return screen, clock, pygame
 
 def set_screen(window_size):
 	screen = pygame.display.set_mode(window_size,HWSURFACE|DOUBLEBUF|RESIZABLE)
 	return screen
+	
 
-pygame_window_name = "Age of empires Minimap resizer"
+PYGAME_WINDOW_NAME = "Age of empires Minimap resizer"
 
 def main():
 	Map = MaxiMap()
-	running = True
 	window_size = Map.window_size
 	screen, clock, pygame = pygame_setup(window_size)
+	running = True
 	mouse_states = {
 	1:False,
 	2:False,
 	3:False
 	}
 	while running:
-		#for button, value in mouse_states.iteritems():
-			#if value and Map.aoe_hwnd:
-				#Map.mouse_click(pygame.mouse.get_pos(), value)
+		for button, value in mouse_states.iteritems():
+			if value and Map.aoe_hwnd:
+				Map.mouse_click(pygame.mouse.get_pos(), value)
 
 		pygame.event.pump()
 		Map.get_hwnd("Age of Empires II: HD Edition")
@@ -198,7 +205,7 @@ def main():
 			Map.display_text("Could not find Age of Empires II Window", screen)
 		
 		pygame.display.flip()
-		clock.tick()
+		clock.tick(30)
 
 
 
