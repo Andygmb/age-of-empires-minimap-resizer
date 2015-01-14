@@ -3,7 +3,7 @@
 
 ![](http://i.imgur.com/0DHR2ZK.jpg)
 
-###Resizes the Age of Empires II: HD Edition ingame minimap & resizes it into a pygame display, for use on a second monitor
+###Grabs the Age of Empires II: HD Edition ingame minimap & resizes it into a pygame display, for use on a second monitor
 
 -
 
