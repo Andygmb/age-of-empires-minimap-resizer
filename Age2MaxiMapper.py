@@ -103,7 +103,7 @@ class MaxiMap:
 		#print lParam & 0xF777, lParam >> 16
 		try:
 			aoe2_pycwnd.SetForegroundWindow()
-		except:
+		except win32ui.error:
 			pass
 
 		if button == 1:
@@ -116,7 +116,7 @@ class MaxiMap:
 
 		try:
 			pygame_pycwnd.SetForegroundWindow()
-		except:
+		except win32ui.error:
 			pass
 		pygame_pycwnd.UpdateWindow()
 
