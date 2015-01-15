@@ -24,10 +24,7 @@ class MaxiMap:
 	def get_hwnd(self, hwnd_string):
 		# FindWindowEx returns 0 if it cannot find the string arg
 		self.aoe_hwnd = win32gui.FindWindowEx(None, 0, None, hwnd_string)
-		if self.aoe_hwnd:
-			return True
-		else:
-			return False
+		return bool(self.aoe_hwnd)
 
 	def resize_window(self, event, screen):
 		self.window_size = event.dict['size']
