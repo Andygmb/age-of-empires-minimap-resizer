@@ -39,8 +39,7 @@ class MaxiMap:
 			self.display_text("Could not find Age of Empires II Window", screen)
 
 	def print_window(self, hwnd, saveDC):
-		result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
-		return result
+		return windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 1)
 
 	def screengrab(self, screen):
 		hwnd = self.aoe_hwnd
